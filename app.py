@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,6 +18,7 @@ app.add_middleware(
 
 IMG_SIZE = 224
 model = tf.keras.models.load_model("best_model.h5")
+
 
 def predict_image(path):
     img = cv2.imread(path)
@@ -31,11 +33,30 @@ def predict_image(path):
     else:
         return {"prediction": "No Caries", "confidence": float(pred)}
 
+
+# serve frontend (optional, keep as is)
 @app.get("/")
 async def home():
     return FileResponse("frontend/index.html")
 
-@app.post("/predict")
+
+# ✅ FIXED: match /api/health
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
+
+
+# ✅ NEW: required by frontend
+@app.get("/api/metrics")
+async def metrics():
+    return {
+        "model": "mobilenet_v2",
+        "status": "loaded"
+    }
+
+
+# ✅ FIXED: match /api/predict
+@app.post("/api/predict")
 async def predict(file: UploadFile = File(...)):
     file_path = "temp.jpg"
 

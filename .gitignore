@@ -6,3 +6,5 @@ test_1.py
 teeth_dataset
 __pycache__
 best_model.h5
+node_modules/*
+/node_modules
