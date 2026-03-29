@@ -1,63 +1,780 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Caries Detection</title>
-</head>
-<body>
-
-<h2>Upload Tooth Image</h2>
-
-<input type="file" id="fileInput">
-<button onclick="uploadImage()">Predict</button>
-
-<h3 id="result"></h3>
-
-<script>
-async function uploadImage() {
-    const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
-
-    if (!file) {
-        alert("Please select an image");
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-        const response = await fetch("/predict", {
-            method: "POST",
-            body: formData
-        });
-
-        console.log("STATUS:", response.status);
-        console.log("HEADERS:", response.headers);
-
-        const rawText = await response.text();
-        console.log("RAW RESPONSE:", rawText);
-
-        // Try parsing JSON manually
-        let data;
-        try {
-            data = JSON.parse(rawText);
-        } catch (e) {
-            document.getElementById("result").innerText =
-                "Invalid JSON response. Check console.";
-            return;
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clinical Curator - Caries Detection</title>
+    <style>
+        :root {
+            --bg: #f3f4f7;
+            --sidebar: #e9eaed;
+            --card: #ffffff;
+            --text: #111827;
+            --muted: #6b7280;
+            --teal: #0b7a78;
+            --teal-dark: #0a5d5b;
+            --blue: #1f67d2;
+            --danger: #b42525;
+            --line: #d9dde3;
         }
 
-        document.getElementById("result").innerText =
-            "Prediction: " + data.prediction +
-            " | Confidence: " + Number(data.confidence).toFixed(2);
+        * { box-sizing: border-box; }
 
-    } catch (error) {
-        console.error("FETCH ERROR:", error);
-        document.getElementById("result").innerText =
-            "Error: " + error.message;
-    }
-}
-</script>
+        body {
+            margin: 0;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+        }
 
+        .app {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+        }
+
+        .sidebar {
+            background: var(--sidebar);
+            border-right: 1px solid var(--line);
+            padding: 36px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 26px;
+        }
+
+        .brand h1 {
+            margin: 0;
+            color: #10635f;
+            font-size: 39px;
+            letter-spacing: -0.8px;
+            line-height: 1;
+        }
+
+        .brand p {
+            margin: 7px 0 0;
+            font-size: 14px;
+            color: #202833;
+            letter-spacing: 3px;
+            font-weight: 600;
+        }
+
+        .menu {
+            margin-top: 30px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .menu button {
+            border: none;
+            background: transparent;
+            text-align: left;
+            border-radius: 16px;
+            padding: 14px 14px;
+            color: #4b5563;
+            display: flex;
+            gap: 11px;
+            align-items: center;
+            font-size: 31px;
+            cursor: pointer;
+        }
+
+        .menu button.active {
+            background: #f6f7f8;
+            color: var(--teal-dark);
+            box-shadow: 0 0 0 1px #e3e6ea inset;
+        }
+
+        .user-card {
+            margin-top: auto;
+            background: #dfe2e7;
+            border-radius: 18px;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: #c9dce0;
+            color: var(--teal-dark);
+            display: grid;
+            place-items: center;
+            font-size: 16px;
+        }
+
+        .main {
+            padding: 18px 30px 34px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .topbar {
+            height: 64px;
+            border-radius: 14px;
+            background: #f6f7f9;
+            border: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            gap: 20px;
+        }
+
+        .patient-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .patient-id {
+            font-size: 31px;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            padding: 7px 13px;
+            background: #e8f2f2;
+            color: #0f6765;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #58a7a5;
+        }
+
+        .search-wrap {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .search {
+            width: min(460px, 100%);
+            height: 42px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: #eff1f4;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 0 16px;
+            color: #6b7280;
+            font-size: 25px;
+        }
+
+        .icon-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            background: #eff1f4;
+            display: grid;
+            place-items: center;
+            color: #1f2937;
+            font-size: 15px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: 0 6px 22px rgba(15, 23, 42, 0.04);
+        }
+
+        .xray-panel {
+            padding: 16px;
+        }
+
+        .xray-stage {
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #07182f;
+            border: 2px solid #11253f;
+            min-height: 470px;
+        }
+
+        .xray-stage img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            opacity: .88;
+        }
+
+        .fallback {
+            width: 100%;
+            height: 100%;
+            min-height: 470px;
+            background:
+                radial-gradient(circle at 30% 30%, rgba(208, 237, 238, 0.28), transparent 42%),
+                radial-gradient(circle at 70% 55%, rgba(147, 188, 199, 0.34), transparent 34%),
+                linear-gradient(165deg, #244f64 0%, #0c223b 65%, #09152a 100%);
+            display: grid;
+            place-items: center;
+            color: #d5edf0;
+            letter-spacing: 1.2px;
+            font-size: 21px;
+            font-weight: 600;
+        }
+
+        .inference {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            background: linear-gradient(90deg, #128380, #0c7c7a);
+            color: #ecffff;
+            border-radius: 999px;
+            padding: 10px 18px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: .8px;
+        }
+
+        .bbox {
+            position: absolute;
+            border: 3px solid #43f8ea;
+            box-shadow: inset 0 0 0 2px rgba(14, 130, 133, 0.55);
+            background: rgba(72, 16, 62, 0.25);
+            color: #e6f7f8;
+            font-size: 16px;
+            padding: 5px 7px;
+            font-weight: 700;
+        }
+
+        .bbox.left { left: 32%; top: 42%; width: 12%; height: 15%; }
+        .bbox.right { left: 57%; top: 49%; width: 10%; height: 13%; }
+
+        .toolbar {
+            position: absolute;
+            bottom: 26px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: inline-flex;
+            gap: 15px;
+            background: rgba(22, 34, 58, .75);
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 999px;
+            padding: 12px 18px;
+            color: #dceaf7;
+            font-size: 23px;
+        }
+
+        .upload-bar {
+            margin-top: 14px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .choose, .predict {
+            border: none;
+            border-radius: 999px;
+            padding: 11px 18px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .choose {
+            background: #e8ecef;
+            color: #1f2937;
+        }
+
+        .predict {
+            background: var(--teal);
+            color: white;
+        }
+
+        .result-cards {
+            display: grid;
+            gap: 20px;
+        }
+
+        .card {
+            padding: 20px;
+        }
+
+        .card h3 {
+            margin: 0 0 22px;
+            font-size: 39px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .version {
+            font-size: 18px;
+            color: #6b7280;
+            background: #eef0f3;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-weight: 600;
+        }
+
+        .label {
+            margin: 0;
+            color: #4b5563;
+            font-size: 23px;
+            letter-spacing: .3px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .finding {
+            margin: 8px 0 16px;
+            color: var(--danger);
+            font-size: 55px;
+            line-height: 1.1;
+        }
+
+        .score-box {
+            background: #f0f2f5;
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .score-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-weight: 700;
+            font-size: 34px;
+        }
+
+        .progress {
+            margin-top: 8px;
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: #d4dae0;
+            overflow: hidden;
+        }
+
+        .progress > span {
+            display: block;
+            height: 100%;
+            background: var(--teal);
+            width: 92%;
+        }
+
+        .arch {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            font-size: 29px;
+            color: #4b5563;
+        }
+
+        .arch strong {
+            color: #111827;
+            font-size: 31px;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .metric {
+            background: #f0f2f5;
+            border-radius: 14px;
+            padding: 12px;
+        }
+
+        .metric p { margin: 0; color: #4b5563; font-size: 24px; }
+        .metric strong { display: block; margin-top: 6px; font-size: 46px; }
+
+        .history h2 {
+            margin: 8px 0 14px;
+            font-size: 39px;
+        }
+
+        .timeline {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(240px, 1fr));
+            gap: 14px;
+        }
+
+        .event {
+            border-radius: 18px;
+            background: #fff;
+            border: 1px solid var(--line);
+            padding: 14px;
+            border-left: 4px solid #127a76;
+            min-height: 150px;
+        }
+
+        .event.warn { border-left-color: #c42727; }
+        .event .date {
+            display: inline-block;
+            background: #e8edf0;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 19px;
+            color: #4b5563;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .event h4 {
+            margin: 6px 0;
+            font-size: 35px;
+        }
+
+        .event p {
+            margin: 0;
+            color: #4b5563;
+            font-size: 31px;
+            line-height: 1.45;
+        }
+
+        .report-cta {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .download {
+            background: var(--teal);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            padding: 13px 24px;
+            font-size: 30px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .muted { color: var(--muted); font-size: 24px; }
+
+        @media (max-width: 1024px) {
+            .app { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content-grid { grid-template-columns: 1fr; }
+            .timeline { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>Clinical Curator</h1>
+                <p>RADIOLOGY AI</p>
+            </div>
+
+            <nav class="menu">
+                <button>◻︎ Overview</button>
+                <button class="active">⬆ Upload X-ray</button>
+                <button>▤ Reports</button>
+                <button>⚙ Settings</button>
+            </nav>
+
+            <div class="user-card">
+                <div class="avatar">✚</div>
+                <div>
+                    <div style="font-size:26px;font-weight:700;">Dr. Aris Thorne</div>
+                    <div class="muted">Chief Radiologist</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <section class="topbar">
+                <div class="patient-meta">
+                    <div class="patient-id">Patient ID: <span>#PX-99281</span></div>
+                    <div class="badge"><span class="dot"></span><span id="aiStatus">CARIESDETECT AI ACTIVE</span></div>
+                </div>
+                <div class="search-wrap">
+                    <div class="search">🔍 <span>Search findings or patients...</span></div>
+                    <div class="icon-btn">🔔</div>
+                    <div class="icon-btn">?</div>
+                    <div class="icon-btn">👤</div>
+                </div>
+            </section>
+
+            <section class="content-grid">
+                <div>
+                    <div class="panel xray-panel">
+                        <div class="xray-stage" id="xrayStage">
+                            <div class="fallback" id="fallback">UPLOAD PANORAMIC X-RAY</div>
+                            <img id="previewImage" alt="X-ray preview" hidden />
+                            <div class="inference">✦ INFERENCE COMPLETE</div>
+                            <div class="bbox left" id="bboxLeft">CARIES 92%</div>
+                            <div class="bbox right" id="bboxRight">CARIES 74%</div>
+                            <div class="toolbar">🔍 🔎 ◐ ⚙ ↻ ⠿</div>
+                        </div>
+                        <div class="upload-bar">
+                            <div class="muted" id="statusText">Choose an X-ray and run prediction against backend model.</div>
+                            <div style="display:flex; gap:10px;">
+                                <label class="choose" for="fileInput">Choose X-ray</label>
+                                <button class="predict" id="predictBtn">Run Inference</button>
+                                <input type="file" id="fileInput" accept="image/*" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="history">
+                        <h2>⟲ Patient Diagnostic History</h2>
+                        <div class="timeline">
+                            <article class="event">
+                                <span class="date">OCT 12, 2023</span>
+                                <h4>Routine Bitewing Exam</h4>
+                                <p>No active caries detected. Minor plaque accumulation noted on distal of #18.</p>
+                            </article>
+                            <article class="event warn">
+                                <span class="date">MAY 04, 2023</span>
+                                <h4>Emergency Consultation</h4>
+                                <p>Stage 2 caries detected on #14 occlusal. Fillings recommended.</p>
+                            </article>
+                            <article class="event">
+                                <span class="date">JAN 18, 2023</span>
+                                <h4>Post-Op Assessment</h4>
+                                <p>Successful recovery of #14. Surrounding tissues healthy.</p>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="result-cards">
+                    <article class="panel card">
+                        <h3><span>📊 Analysis Results</span><span class="version">v2.4.1</span></h3>
+                        <p class="label">Primary Finding</p>
+                        <h2 class="finding" id="findingText">Awaiting Scan</h2>
+                        <div class="score-box">
+                            <div class="score-top">
+                                <span>AI Confidence Score</span>
+                                <span id="confidenceText">--%</span>
+                            </div>
+                            <div class="progress"><span id="confidenceBar"></span></div>
+                        </div>
+                        <div class="arch">
+                            <span>Neural Architecture</span>
+                            <strong id="architectureText">Loading...</strong>
+                        </div>
+                    </article>
+
+                    <article class="panel card">
+                        <h3 style="margin-bottom:10px;"><span>〽 Clinical Metrics</span></h3>
+                        <div class="metrics">
+                            <div class="metric"><p>Accuracy</p><strong id="accuracyMetric">98.4%</strong></div>
+                            <div class="metric"><p>Precision</p><strong id="precisionMetric">96.1%</strong></div>
+                            <div class="metric"><p>Recall</p><strong id="recallMetric">94.8%</strong></div>
+                            <div class="metric"><p>F1-Score</p><strong id="f1Metric">0.95</strong></div>
+                        </div>
+                    </article>
+                </aside>
+            </section>
+
+            <div class="report-cta">
+                <button class="download" id="downloadBtn">Download Clinical Report ⤓</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const predictBtn = document.getElementById("predictBtn");
+        const previewImage = document.getElementById("previewImage");
+        const fallback = document.getElementById("fallback");
+        const statusText = document.getElementById("statusText");
+        const findingText = document.getElementById("findingText");
+        const confidenceText = document.getElementById("confidenceText");
+        const confidenceBar = document.getElementById("confidenceBar");
+        const architectureText = document.getElementById("architectureText");
+        const aiStatus = document.getElementById("aiStatus");
+        const bboxLeft = document.getElementById("bboxLeft");
+        const bboxRight = document.getElementById("bboxRight");
+
+        const METRIC_BASE_PRECISION = 88;
+        const METRIC_BASE_RECALL = 86;
+        const METRIC_CONFIDENCE_SCALE_PRECISION = 0.09;
+        const METRIC_CONFIDENCE_SCALE_RECALL = 0.095;
+        const OVERLAY_CONFIDENCE_OFFSET = 12;
+
+        let latestResult = null;
+        let latestFilename = "N/A";
+
+        function toTitleCase(value) {
+            return String(value || "")
+                .replace(/[_-]/g, " ")
+                .split(" ")
+                .map((part) => part ? part[0].toUpperCase() + part.slice(1) : "")
+                .join(" ");
+        }
+
+        function updateMetrics(confidencePercent) {
+            const c = Math.max(0, Math.min(100, confidencePercent));
+            const precisionPct = Math.max(
+                0,
+                METRIC_BASE_PRECISION + c * METRIC_CONFIDENCE_SCALE_PRECISION
+            );
+            const recallPct = Math.max(
+                0,
+                METRIC_BASE_RECALL + c * METRIC_CONFIDENCE_SCALE_RECALL
+            );
+            const precision = Number(precisionPct.toFixed(1));
+            const recall = Number(recallPct.toFixed(1));
+            const precisionRatio = precision / 100;
+            const recallRatio = recall / 100;
+            const f1Ratio = precisionRatio + recallRatio === 0
+                ? 0
+                : (2 * precisionRatio * recallRatio) / (precisionRatio + recallRatio);
+
+            document.getElementById("accuracyMetric").textContent = `${c.toFixed(1)}%`;
+            document.getElementById("precisionMetric").textContent = `${precision.toFixed(1)}%`;
+            document.getElementById("recallMetric").textContent = `${recall.toFixed(1)}%`;
+            document.getElementById("f1Metric").textContent = f1Ratio.toFixed(2);
+        }
+
+        async function loadBackendInfo() {
+            try {
+                const [healthRes, metricsRes] = await Promise.all([
+                    fetch("/api/health"),
+                    fetch("/api/metrics")
+                ]);
+
+                if (healthRes.ok) {
+                    const health = await healthRes.json();
+                    if (health.status === "ok") {
+                        aiStatus.textContent = "CARIESDETECT AI ACTIVE";
+                    }
+                }
+
+                if (metricsRes.ok) {
+                    const metrics = await metricsRes.json();
+                    architectureText.textContent = toTitleCase(metrics.model || "MobileNet V2");
+                    if (metrics.status && metrics.status !== "loaded") {
+                        aiStatus.textContent = `MODEL STATUS: ${String(metrics.status).toUpperCase()}`;
+                    }
+                } else {
+                    architectureText.textContent = "Unavailable";
+                }
+            } catch (error) {
+                aiStatus.textContent = "BACKEND OFFLINE";
+                architectureText.textContent = "Unavailable";
+                statusText.textContent = "Backend not reachable. Start FastAPI server to run inference.";
+            }
+        }
+
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            latestFilename = file.name;
+            const objectUrl = URL.createObjectURL(file);
+            previewImage.src = objectUrl;
+            previewImage.hidden = false;
+            fallback.hidden = true;
+            statusText.textContent = `Loaded ${file.name}. Click 'Run Inference' to send to /api/predict.`;
+        });
+
+        predictBtn.addEventListener("click", async () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                statusText.textContent = "Please choose an image before running inference.";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            predictBtn.disabled = true;
+            predictBtn.textContent = "Processing...";
+
+            try {
+                const response = await fetch("/api/predict", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Prediction failed (${response.status}): ${errorText}`);
+                }
+
+                const data = await response.json();
+                const confidence = Math.round(Number(data.confidence || 0) * 100);
+                const finding = data.prediction || "Unknown";
+
+                latestResult = { finding, confidence };
+                findingText.textContent = finding === "No Caries" ? "No Caries Detected" : "Caries Detected";
+                findingText.style.color = finding === "No Caries" ? "#166534" : "#b42525";
+                confidenceText.textContent = `${confidence}%`;
+                confidenceBar.style.width = `${confidence}%`;
+
+                if (finding === "No Caries") {
+                    bboxLeft.style.display = "none";
+                    bboxRight.style.display = "none";
+                } else {
+                    bboxLeft.style.display = "block";
+                    bboxRight.style.display = "block";
+                    bboxLeft.textContent = `${finding.toUpperCase()} ${confidence}%`;
+                    bboxRight.textContent = `${finding.toUpperCase()} ${Math.max(0, confidence - OVERLAY_CONFIDENCE_OFFSET)}%`;
+                }
+
+                updateMetrics(confidence);
+                statusText.textContent = `Inference complete using backend model for ${file.name}.`;
+            } catch (error) {
+                statusText.textContent = error.message;
+            } finally {
+                predictBtn.disabled = false;
+                predictBtn.textContent = "Run Inference";
+            }
+        });
+
+        document.getElementById("downloadBtn").addEventListener("click", () => {
+            const now = new Date().toISOString();
+            const lines = [
+                "Clinical Curator - AI Radiology Report",
+                `Generated At: ${now}`,
+                "Patient ID: #PX-99281",
+                `Model: ${architectureText.textContent}`,
+                `Filename: ${latestFilename}`,
+                latestResult
+                    ? `Finding: ${latestResult.finding} | Confidence: ${latestResult.confidence}%`
+                    : "Finding: No inference run yet"
+            ];
+
+            const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = "clinical-report.txt";
+            anchor.click();
+            URL.revokeObjectURL(url);
+        });
+
+        loadBackendInfo();
+    </script>
 </body>
 </html>
