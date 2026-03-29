@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Caries Detection</title>
+</head>
+<body>
+
+<h2>Upload Tooth Image</h2>
+
+<input type="file" id="fileInput">
+<button onclick="uploadImage()">Predict</button>
+
+<h3 id="result"></h3>
+
+<script>
+async function uploadImage() {
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Please select an image");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const response = await fetch("/predict", {
+            method: "POST",
+            body: formData
+        });
+
+        console.log("STATUS:", response.status);
+        console.log("HEADERS:", response.headers);
+
+        const rawText = await response.text();
+        console.log("RAW RESPONSE:", rawText);
+
+        // Try parsing JSON manually
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (e) {
+            document.getElementById("result").innerText =
+                "Invalid JSON response. Check console.";
+            return;
+        }
+
+        document.getElementById("result").innerText =
+            "Prediction: " + data.prediction +
+            " | Confidence: " + Number(data.confidence).toFixed(2);
+
+    } catch (error) {
+        console.error("FETCH ERROR:", error);
+        document.getElementById("result").innerText =
+            "Error: " + error.message;
+    }
+}
+</script>
+
+</body>
+</html>

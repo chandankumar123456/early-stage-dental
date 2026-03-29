@@ -1,0 +1,8 @@
+.venv
+.vscode
+sample_predictions.png
+temp.jpg
+test_1.py
+teeth_dataset
+__pycache__
+best_model.h5
