@@ -646,14 +646,16 @@
             );
             const precision = Number(precisionPct.toFixed(1));
             const recall = Number(recallPct.toFixed(1));
-            const f1Percent = precision + recall === 0
+            const precisionRatio = precision / 100;
+            const recallRatio = recall / 100;
+            const f1Ratio = precisionRatio + recallRatio === 0
                 ? 0
-                : (2 * precision * recall) / (precision + recall);
+                : (2 * precisionRatio * recallRatio) / (precisionRatio + recallRatio);
 
             document.getElementById("accuracyMetric").textContent = `${c.toFixed(1)}%`;
             document.getElementById("precisionMetric").textContent = `${precision.toFixed(1)}%`;
             document.getElementById("recallMetric").textContent = `${recall.toFixed(1)}%`;
-            document.getElementById("f1Metric").textContent = (f1Percent / 100).toFixed(2);
+            document.getElementById("f1Metric").textContent = f1Ratio.toFixed(2);
         }
 
         async function loadBackendInfo() {
@@ -730,8 +732,15 @@
                 confidenceText.textContent = `${confidence}%`;
                 confidenceBar.style.width = `${confidence}%`;
 
-                bboxLeft.textContent = `${finding.toUpperCase()} ${Math.max(0, confidence)}%`;
-                bboxRight.textContent = `${finding.toUpperCase()} ${Math.max(0, confidence - OVERLAY_CONFIDENCE_OFFSET)}%`;
+                if (finding === "No Caries") {
+                    bboxLeft.style.display = "none";
+                    bboxRight.style.display = "none";
+                } else {
+                    bboxLeft.style.display = "block";
+                    bboxRight.style.display = "block";
+                    bboxLeft.textContent = `${finding.toUpperCase()} ${confidence}%`;
+                    bboxRight.textContent = `${finding.toUpperCase()} ${Math.max(0, confidence - OVERLAY_CONFIDENCE_OFFSET)}%`;
+                }
 
                 updateMetrics(confidence);
                 statusText.textContent = `Inference complete using backend model for ${file.name}.`;
