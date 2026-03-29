@@ -1,15 +1,15 @@
 # Early-Stage Dental Caries Detection
 
-A FastAPI + TensorFlow project for early-stage dental caries detection from X-ray images, now with a clinical dashboard-style frontend that mirrors the provided UI reference.
+A FastAPI + TensorFlow project for early-stage dental caries detection from X-ray images, with a frontend that maps directly to supported backend API operations.
 
 ## 1) Project Overview
 
 This repository contains:
 - **Backend inference service** built with FastAPI.
 - **Model training and prediction scripts** built with TensorFlow/Keras.
-- **Frontend dashboard** in `frontend/index.html` with upload, inference, and reporting UI.
+- **Frontend UI** in `frontend/index.html` for backend health, model metadata, and inference.
 
-The frontend is directly integrated with backend APIs so that model status, architecture, prediction class, and confidence are visible in the UI.
+The frontend is directly integrated with backend APIs and only exposes interactions supported by those endpoints.
 
 ## 2) Repository Structure
 
@@ -21,7 +21,7 @@ The frontend is directly integrated with backend APIs so that model status, arch
 ├── requirements.txt        # Python dependencies
 ├── best_model.h5           # Trained model file (required at runtime)
 ├── frontend/
-│   └── index.html          # Complete dashboard frontend (HTML/CSS/JS)
+│   └── index.html          # Backend-aligned frontend (HTML/CSS/JS)
 └── README.md               # Technical documentation
 ```
 
@@ -101,21 +101,11 @@ Frontend file: `frontend/index.html`
 
 ## 4.1 Design and Layout
 
-The frontend reproduces the provided clinical dashboard-style design with:
-- Left sidebar (brand, navigation, clinician card).
-- Top toolbar (patient info, AI status, search, action icons).
-- Main X-ray panel with:
-  - Inference badge.
-  - Bounding-box overlays and labels.
-  - Control toolbar styling.
-  - Upload and inference controls.
-- Right-side result cards:
-  - Analysis result.
-  - Confidence progress bar.
-  - Model architecture (from backend `/api/metrics`).
-  - Clinical metrics panel.
-- Patient diagnostic history section.
-- Download clinical report button.
+The frontend is intentionally minimal and includes only backend-supported elements:
+- Backend status display (`/api/health`).
+- Model metadata display (`/api/metrics` model and status).
+- Image upload input and prediction action (`/api/predict` with multipart `file`).
+- Prediction and confidence display sourced from backend response.
 
 ## 4.2 Frontend-Backend Integration
 
@@ -127,20 +117,11 @@ On load, frontend calls:
 ### Inference Flow
 1. User selects image (`<input type="file">`).
 2. Frontend shows image preview in the X-ray panel.
-3. On **Run Inference**, frontend sends:
-   - `POST /api/predict` with multipart `file`.
+3. On **Run Prediction**, frontend sends:
+    - `POST /api/predict` with multipart `file`.
 4. UI updates with backend response:
-   - Primary finding (`Caries` / `No Caries`).
-   - Confidence percentage and progress bar.
-   - Overlay labels updated from inference output.
-
-### Report Download
-- Generates a text report in browser including:
-  - timestamp,
-  - patient id,
-  - model architecture,
-  - uploaded filename,
-  - latest inference result.
+    - Primary finding (`Caries` / `No Caries`).
+    - Confidence percentage and progress bar.
 
 ## 4.3 Frontend Responsiveness
 
