@@ -4,7 +4,7 @@ This project performs binary image classification of dental X-ray images to dete
 
 ## 1. Model Architecture
 
-- **Base model:** MobileNet **V2** (`tf.keras.applications.MobileNetV2`, `include_top=False`, `weights="imagenet"`).
+- **Base model:** MobileNetV2 (`tf.keras.applications.MobileNetV2`, `include_top=False`, `weights="imagenet"`).
 - **Total layers:** 159
   - **Trainable layers:** 5
   - **Non-trainable layers:** 154 (frozen MobileNetV2 backbone)
@@ -29,10 +29,10 @@ This project performs binary image classification of dental X-ray images to dete
 - **Classification type:** Binary classification
 - **Number of classes:** 2
   - `caries`
-  - `without_caries` / `no-caries` (dataset folder naming differs between train/test folders)
+  - `without_caries` (training folder) / `no-caries` (test folder)
 - **Total images:** Derived directly from dataset folders at runtime (counted using `os.listdir` in `train.py`)
 - **Split used by the training script:**
-  - Train: dataset `Trianing/`
+  - Train: dataset folder `Trianing/` (upstream source folder name)
   - Validation: dataset `test/` (used as `validation_data` during fitting)
   - Test: same `test/` generator is also used for final evaluation
 
@@ -108,7 +108,7 @@ Current training runs with fixed epochs and saves the final model after training
 
 - **Model format:** HDF5 (`.h5`)
   - Training script saves model as `29_03_best_model.h5`
-  - Inference scripts/API load `best_model.h5` (rename or align artifact path as needed)
+  - Deployment expects the trained artifact to be available as `best_model.h5`; after training, rename once with `mv 29_03_best_model.h5 best_model.h5` (or update loading paths consistently)
 - **Model loading for inference:** `tf.keras.models.load_model(...)`
 - **Deployment approach:**
   - FastAPI backend serves inference endpoint (`POST /api/predict`)
